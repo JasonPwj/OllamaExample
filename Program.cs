@@ -40,7 +40,7 @@ app.MapGet(
 
 app.MapGet(
     "/question",
-    async (string q, OllamaApiClient ollamaClient, HttpContext context) =>
+    async (string q, OllamaApiClient ollamaClient, HttpContext context, string? model = "llama3") =>
     {
         context.Response.ContentType = "text/plain";
         var chat = ollamaClient.ChatAsync(
