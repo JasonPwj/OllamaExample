@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net.WebSockets;
+using System.Text;
 using Microsoft.AspNetCore.Http.HttpResults;
 using OllamaSharp;
 using OllamaSharp.Models.Chat;
@@ -23,6 +24,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+var _chatSessions = new Dictionary<string, List<Message>>();
+
 app.MapGet(
     "/models",
     async (OllamaApiClient ollamaClient) =>
@@ -40,21 +43,34 @@ app.MapGet(
 
 app.MapGet(
     "/question",
-    async (string q, OllamaApiClient ollamaClient, HttpContext context, string? model = "llama3") =>
+    async (
+        string q,
+        OllamaApiClient ollamaClient,
+        HttpContext context,
+        string? sessionId = "default",
+        string? model = "llama3"
+    ) =>
     {
         context.Response.ContentType = "text/plain";
+
+        sessionId = sessionId ?? "default";
+        if (!_chatSessions.ContainsKey(sessionId))
+        {
+            _chatSessions[sessionId] = new List<Message>();
+        }
+        var history = _chatSessions[sessionId];
+        history.Add(new Message(ChatRole.User, q));
         var chat = ollamaClient.ChatAsync(
-            new ChatRequest()
-            {
-                Model = "llama3",
-                Messages = new List<Message> { new Message(ChatRole.User, q) }
-            }
+            new ChatRequest() { Model = model ?? "llama3", Messages = history }
         );
+        StringBuilder sb = new StringBuilder();
         await foreach (var rsp in chat)
         {
+            sb.Append(rsp?.Message.Content);
             await context.Response.WriteAsync(rsp?.Message.Content ?? "");
             await context.Response.Body.FlushAsync();
         }
+        history.Add(new Message(ChatRole.Assistant, sb.ToString()));
     }
 );
 
