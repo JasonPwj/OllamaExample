@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks();
 
 builder.Services.AddSingleton(sp => new OllamaApiClient(
     new Uri(builder.Configuration.GetValue<string>("OllamaHost") ?? "http://localhost:11434")
@@ -22,7 +23,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+
+app.MapHealthChecks("/health");
 
 var _chatSessions = new Dictionary<string, List<Message>>();
 
